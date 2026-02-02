@@ -83,7 +83,7 @@ const messageHandler = (socket, io, connectedUsers) => {
             socket.emit('message_sent', sentConfirmation);
 
             // Deliver to recipient if online
-            const recipientSocketId = connectedUsers.get(receiverId);
+            const recipientSocketId = connectedUsers.get(String(receiverId));
             if (recipientSocketId) {
                 io.to(recipientSocketId).emit('receive_message', { message });
                 console.log(`   ↳ Delivered to online user: ${receiverCheck.rows[0].username}`);
@@ -200,6 +200,51 @@ const messageHandler = (socket, io, connectedUsers) => {
         } catch (error) {
             console.error('Get history error:', error);
             if (callback) callback({ error: 'Failed to fetch message history' });
+        }
+    });
+
+
+    /**
+     * Handle edit_message event
+     */
+    socket.on('edit_message', async (data) => {
+        const { messageId, content, receiverId } = data;
+
+        try {
+            // Update in DB (we reuse the logic or just do a quick update here)
+            // Ideally we call the same logic as the REST API, but for speed let's just update
+            const result = await query(
+                `UPDATE messages 
+                 SET content = $1, is_edited = true, edited_at = NOW() 
+                 WHERE id = $2 AND sender_id = $3
+                 RETURNING id, content, is_edited, edited_at`,
+                [content, messageId, socket.userId]
+            );
+
+            if (result.rows.length > 0) {
+                const updatedMessage = result.rows[0];
+
+                // Broadcast to receiver
+                const recipientSocketId = connectedUsers.get(String(receiverId));
+                if (recipientSocketId) {
+                    io.to(recipientSocketId).emit('message_updated', {
+                        id: messageId,
+                        content: content,
+                        isEdited: true,
+                        senderId: socket.userId
+                    });
+                }
+
+                // Confirm to sender (so they see the update immediately if they have multiple tabs open)
+                socket.emit('message_updated', {
+                    id: messageId,
+                    content: content,
+                    isEdited: true,
+                    senderId: socket.userId
+                });
+            }
+        } catch (error) {
+            console.error('Edit message error:', error);
         }
     });
 };

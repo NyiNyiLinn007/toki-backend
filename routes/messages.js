@@ -427,11 +427,57 @@ router.put('/message/:messageId', async (req, res) => {
             }
         });
 
+
     } catch (error) {
         console.error('Edit message error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to edit message'
+        });
+    }
+});
+
+/**
+ * @route   DELETE /api/messages/conversations/:partnerId
+ * @desc    Delete entire conversation with a user (Hard Delete for MVP)
+ * @access  Private
+ */
+router.delete('/conversations/:partnerId', async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { partnerId } = req.params;
+
+        // Verify partner exists
+        const partnerCheck = await query(
+            'SELECT id FROM users WHERE id = $1',
+            [partnerId]
+        );
+
+        if (partnerCheck.rows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Hard delete all messages between these two users
+        await query(
+            `DELETE FROM messages 
+             WHERE (sender_id = $1 AND receiver_id = $2) 
+                OR (sender_id = $2 AND receiver_id = $1)`,
+            [userId, partnerId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Conversation deleted'
+        });
+
+    } catch (error) {
+        console.error('Delete conversation error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete conversation'
         });
     }
 });

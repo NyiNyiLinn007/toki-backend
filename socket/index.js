@@ -30,7 +30,7 @@ const initializeSocket = (io) => {
         console.log(`   Connected users: ${connectedUsers.size + 1}`);
 
         // Store user's socket ID
-        connectedUsers.set(userId, socket.id);
+        connectedUsers.set(String(userId), socket.id);
 
         // Broadcast user online status to all other users
         socket.broadcast.emit('user_online', {
@@ -62,7 +62,7 @@ const initializeSocket = (io) => {
             console.log(`   Connected users: ${connectedUsers.size - 1}`);
 
             // Remove from connected users
-            connectedUsers.delete(userId);
+            connectedUsers.delete(String(userId));
 
             // Update database - set user offline
             try {
