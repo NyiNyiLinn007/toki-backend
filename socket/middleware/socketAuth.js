@@ -34,7 +34,7 @@ const socketAuthMiddleware = async (socket, next) => {
 
         // Attach user data to socket
         socket.user = result.rows[0];
-        socket.userId = result.rows[0].id;
+        socket.userId = String(result.rows[0].id);
 
         // Update user online status
         await query(
