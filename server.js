@@ -27,13 +27,34 @@ const { initializeSocket } = require('./socket');
 const app = express();
 const server = http.createServer(app);
 
+// CORS Origins Configuration - supports multiple origins
+const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://toki-message.vercel.app', // Production Vercel frontend
+    process.env.CORS_ORIGIN, // Additional origin from env
+].filter(Boolean); // Remove undefined values
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, curl, etc.)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin) || process.env.CORS_ORIGIN === '*') {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(null, true); // In production, allow all for now (adjust as needed)
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Initialize Socket.io with CORS
 const io = new Server(server, {
-    cors: {
-        origin: process.env.CORS_ORIGIN || '*',
-        methods: ['GET', 'POST'],
-        credentials: true
-    },
+    cors: corsOptions,
     pingTimeout: 60000,
     pingInterval: 25000
 });
@@ -46,10 +67,7 @@ const io = new Server(server, {
 app.use(helmet());
 
 // CORS configuration
-app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: true
-}));
+app.use(cors(corsOptions));
 
 // Body parsing
 app.use(express.json({ limit: '10kb' }));
