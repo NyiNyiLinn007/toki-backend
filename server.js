@@ -108,6 +108,19 @@ app.use((req, res) => {
     });
 });
 
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = ['https://toki-message.vercel.app', 'http://localhost:3000'];
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Credentials', 'true'); // if using cookies
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 // Error handler (must be last)
 app.use(errorHandler);
 
